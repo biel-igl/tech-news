@@ -26,14 +26,11 @@ def scrape_updates(html_content):
     return news_urls
 
 
-# Requisito 3
 def scrape_next_page_link(html_content):
     try:
         selector = Selector(text=html_content)
-        # Encontre o link da próxima página usando um seletor CSS adequado
         next_page_link = selector.css("a.next::attr(href)").get()
 
-        # Se encontrarmos o link da próxima página, retornamos a URL
         if next_page_link:
             return next_page_link
     except Exception:
@@ -42,10 +39,23 @@ def scrape_next_page_link(html_content):
     return None
 
 
-# Requisito 4
 def scrape_news(html_content):
-    """Seu código deve vir aqui"""
-    raise NotImplementedError
+    selector = Selector(text=html_content)
+    new_news = {
+        "url": selector.css("link[rel=canonical]::attr(href)").get(),
+        "title": selector.css("h1.entry-title::text").get().strip(),
+        "timestamp": selector.css("li.meta-date::text").get(),
+        "writer": selector.css("span.author a::text").get(),
+        "reading_time": int(
+            selector.css(".meta-reading-time::text").re_first(r"\d+")
+        ),
+        "summary": "".join(
+            selector.css(".entry-content > p:first-of-type *::text").getall()
+        ).strip(),
+        "category": selector.css(".category-style span.label::text").get(),
+    }
+
+    return new_news
 
 
 # Requisito 5
