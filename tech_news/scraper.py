@@ -4,14 +4,14 @@ import time
 
 def fetch(url):
     headers = {"user-agent": "Fake user-agent"}
+    time.sleep(1)
     try:
         response = requests.get(url, headers=headers, timeout=3)
         if response.status_code == 200:
-            time.sleep(1)
             return response.text
         else:
             return None
-    except requests.exceptions.Timeout:
+    except requests.exceptions.RequestException:
         return None
 
 
