@@ -1,6 +1,7 @@
 import requests
 import time
 from parsel import Selector
+from tech_news.database import create_news
 
 
 def fetch(url):
@@ -58,7 +59,47 @@ def scrape_news(html_content):
     return new_news
 
 
-# Requisito 5
-def get_tech_news(amount):
-    """Seu código deve vir aqui"""
-    raise NotImplementedError
+def fetch_news(url):
+    html_content = fetch(url)
+    if html_content is not None:
+        return scrape_updates(html_content)
+    return []
+
+
+def fetch_and_store_news(url, n, news_list):
+    html_content = fetch(url)
+
+    if html_content is None:
+        return n, False
+
+    news_links = scrape_updates(html_content)[:n]
+
+    for news_link in news_links:
+        news_html = fetch(news_link)
+
+        if news_html is not None:
+            news_data = scrape_news(news_html)
+
+            if news_data:
+                create_news(news_data)
+                news_list.append(news_data)
+                n -= 1
+
+    next_page_link = scrape_next_page_link(html_content)
+
+    return n, next_page_link is None
+
+
+def get_tech_news(n):
+    news_list = []  # Lista para armazenar as notícias coletadas
+    url = "https://blog.betrybe.com/page/1/"
+
+    while n > 0:
+        n, stop = fetch_and_store_news(url, n, news_list)
+
+        if stop:
+            break
+
+        url = scrape_next_page_link(fetch(url))
+
+    return news_list
