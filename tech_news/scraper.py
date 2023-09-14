@@ -1,5 +1,5 @@
-import requests
 import time
+import requests
 from parsel import Selector
 from tech_news.database import create_news
 
@@ -11,33 +11,27 @@ def fetch(url):
         response = requests.get(url, headers=headers, timeout=3)
         if response.status_code == 200:
             return response.text
-        else:
-            return None
     except requests.exceptions.RequestException:
-        return None
+        pass
+    return None
 
 
 def scrape_updates(html_content):
     try:
         selector = Selector(text=html_content)
         news_urls = selector.css(".entry-title a::attr(href)").getall()
+        return news_urls
     except Exception:
-        news_urls = []
-
-    return news_urls
+        return []
 
 
 def scrape_next_page_link(html_content):
     try:
         selector = Selector(text=html_content)
         next_page_link = selector.css("a.next::attr(href)").get()
-
-        if next_page_link:
-            return next_page_link
+        return next_page_link
     except Exception:
-        pass
-
-    return None
+        return None
 
 
 def scrape_news(html_content):
@@ -55,51 +49,23 @@ def scrape_news(html_content):
         ).strip(),
         "category": selector.css(".category-style span.label::text").get(),
     }
-
     return new_news
 
 
-def fetch_news(url):
-    html_content = fetch(url)
-    if html_content is not None:
-        return scrape_updates(html_content)
-    return []
+def get_tech_news(amount):
+    url = "https://blog.betrybe.com"
+    links = []
 
+    while amount > len(links):
+        all_articles = fetch(url)
+        links.extend(scrape_updates(all_articles))
+        url = scrape_next_page_link(all_articles)
 
-def fetch_and_store_news(url, n, news_list):
-    html_content = fetch(url)
+    links_content = []
 
-    if html_content is None:
-        return n, False
+    for link in links:
+        links_content.append(scrape_news(fetch(link)))
 
-    news_links = scrape_updates(html_content)[:n]
+    create_news(links_content[0:amount])
 
-    for news_link in news_links:
-        news_html = fetch(news_link)
-
-        if news_html is not None:
-            news_data = scrape_news(news_html)
-
-            if news_data:
-                create_news(news_data)
-                news_list.append(news_data)
-                n -= 1
-
-    next_page_link = scrape_next_page_link(html_content)
-
-    return n, next_page_link is None
-
-
-def get_tech_news(n):
-    news_list = []  # Lista para armazenar as notícias coletadas
-    url = "https://blog.betrybe.com/page/1/"
-
-    while n > 0:
-        n, stop = fetch_and_store_news(url, n, news_list)
-
-        if stop:
-            break
-
-        url = scrape_next_page_link(fetch(url))
-
-    return news_list
+    return links_content[0:amount]
